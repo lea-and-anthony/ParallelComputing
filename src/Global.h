@@ -18,7 +18,7 @@
 #define DEBUGX	494
 #define DEBUGY	342
 
-#ifdef WIN32
+#ifdef _WIN32
   //here only windows
   #include <stdint.h>
   #include <direct.h>

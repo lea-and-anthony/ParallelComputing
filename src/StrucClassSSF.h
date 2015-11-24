@@ -218,7 +218,7 @@ protected:
   {
     // reset and initialize variables
     for(size_t i = 0; i < meanPatch.size(); ++i)
-      fill(meanPatch[i].begin(), meanPatch[i].end(), 0);
+		fill(meanPatch[i].begin(), meanPatch[i].end(), (FeatureType)0);
     newPrediction.init((int)meanPatch.size());
 
     // auto sampleIt = this->samples.begin() + node->getStart();
@@ -311,7 +311,7 @@ protected:
     typename RandomTree<SplitData<FeatureType>,Sample<FeatureType>,Label,Prediction,IErrorData>::LSamplesVector::const_iterator sampleEnd = this->samples.end();
 
     this->importance.resize(this->nClasses);
-    fill(this->importance.begin(), this->importance.end(), 0);
+	fill(this->importance.begin(), this->importance.end(), (FeatureType)0);
     for (; sampleIt != sampleEnd; ++sampleIt)
       ++(this->importance[sampleIt->label.value]);
 
@@ -697,7 +697,7 @@ protected:
 
   void write(const Prediction &prediction, ostream &out) const
   {
-    for (int i = 0; i < prediction.hist.size(); ++i)
+    for (size_t i = 0; i < prediction.hist.size(); ++i)
       out << prediction.hist[i] << " ";
     out << prediction.n << " ";
   }
@@ -708,7 +708,7 @@ protected:
   void read(Prediction &prediction, istream &in) const
   {
     prediction.init(xLDim * yLDim);
-    for (int i = 0; i < prediction.hist.size(); ++i)
+	for (size_t i = 0; i < prediction.hist.size(); ++i)
       in >> prediction.hist[i];
     in >> prediction.n;
   }

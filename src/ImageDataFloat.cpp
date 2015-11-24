@@ -270,7 +270,7 @@ void ImageDataFloat::computeFeaturesWithCorrCoeff(const cv::Mat &input, vector<c
     // copy data into float array
     float *cov_feat_input = new float[input.rows * input.cols * numChannels]; //B G R I_x I_y -> results in 10 covariance feature channels
     float *d_ptr = cov_feat_input;
-    for(int c = 0; c < tmpSplit.size(); ++c)
+    for(size_t c = 0; c < tmpSplit.size(); ++c)
       for(int h = 0; h < input.rows; ++h)
         for(int w = 0; w < input.cols; ++w, ++d_ptr)
           *d_ptr = (float)tmpSplit[c].at<float>(h, w);
@@ -354,7 +354,7 @@ void ImageDataFloat::computeHOGLike4SingleChannel(const cv::Mat &img, vector<cv:
     // compute orientation information
     float *dataX, *dataY, *pAngle, *pMag;
 
-    for(size_t y = 0; y < Itmp1.rows; ++y)
+    for(int y = 0; y < Itmp1.rows; ++y)
     {
         dataX = (float *)I_x.ptr(y);
         dataY = (float *)I_y.ptr(y);
@@ -362,13 +362,13 @@ void ImageDataFloat::computeHOGLike4SingleChannel(const cv::Mat &img, vector<cv:
         pMag = (float *)Itmp2.ptr(y);
 
     //  dataX += I_x.step1(0), dataY += I_y.step1(0), dataZ += Itmp1.step1(0))
-        for(size_t x = 0; x < Itmp1.cols; ++x)
+        for(int x = 0; x < Itmp1.cols; ++x)
         {
             // Avoid division by zero
             float tx = *dataX + (float)_copysign(0.000001f, *dataX);
 
             // Scaling [-pi/2 pi/2] -> [0 80*pi]
-            *pAngle = ( atanf(*dataY/tx)+ CV_PI / 2.0f ) * 80.0f;
+            *pAngle = (float) ( atanf(*dataY/tx)+ CV_PI / 2.0f ) * 80.0f;
 
             // *pAngle = atan2f(*dataY, *dataX); ?
             *pMag = sqrtf(*dataX*(*dataX) + *dataY*(*dataY));

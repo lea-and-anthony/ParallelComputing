@@ -14,9 +14,14 @@
 //
 // =========================================================================================
 
-#include <iostream>
+#ifdef _WIN32
+#include <io.h>
+#else
 #include <unistd.h>
 #include <omp.h>
+#endif
+
+#include <iostream>
 #include <sys/stat.h>
 
 #include "Global.h"
@@ -25,7 +30,6 @@
 #include "ImageDataFloat.h"
 #include "SemanticSegmentationForests.h"
 #include "StrucClassSSF.h"
-
 #include "label.h"
 
 using namespace std;
@@ -38,8 +42,7 @@ using namespace vision;
 
 void usage (char *com) 
 {
-    std::cerr<< "usage: " << com << " <configfile> <inputimage> <outputimage> <n.o.trees> <tree-model-prefix>\n"
-        ;
+    std::cerr<< "usage: " << com << " <configfile> <n.o.trees> <tree-model-prefix>\n";
     exit(1);
 }
 
@@ -105,7 +108,7 @@ void testStructClassForest(StrucClassSSF<float> *forest, ConfigReader *cr, Train
 
         // Initialize the result matrices
         vector<cv::Mat> result(cr->numLabels);
-        for(int j = 0; j < result.size(); ++j)
+		for (size_t j = 0; j < result.size(); ++j)
             result[j] = Mat::zeros(box.size(), CV_32FC1);
         
         // Iterate over input image pixels
@@ -114,7 +117,7 @@ void testStructClassForest(StrucClassSSF<float> *forest, ConfigReader *cr, Train
         {
             // Obtain forest predictions
             // Iterate over all trees
-            for(size_t t = 0; t < cr->numTrees; ++t)
+            for(int t = 0; t < cr->numTrees; ++t)
             {
             	// The prediction itself.
             	// The given Sample object s contains the imageId and the pixel coordinates.
@@ -198,7 +201,7 @@ int main(int argc, char* argv[])
     char *optTreeFnamePrefix=NULL;
     char buffer[2048];
 
-    srand(time(0));
+    srand((unsigned int)time(0));
     setlocale(LC_NUMERIC, "C");
     profiling(NULL);
 
@@ -275,6 +278,10 @@ int main(int argc, char* argv[])
 
 
     std::cout << "Terminated successfully.\n";
+
+#ifdef _WIN32
+	system("PAUSE");
+#endif
 
     return 0;
 }

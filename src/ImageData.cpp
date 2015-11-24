@@ -403,7 +403,7 @@ bool ImageData::WriteImageIntOrFloat(const cv::Mat &imgInt, const char *strFilen
     if (pFile==NULL)
         return false;
 
-    if (fwrite(imgInt.data, 4, imgInt.rows*imgInt.cols, pFile)<imgInt.rows*imgInt.cols)
+    if (fwrite(imgInt.data, 4, imgInt.rows*imgInt.cols, pFile) < (size_t)imgInt.rows*imgInt.cols)
     {
         fclose(pFile);
         return false;
@@ -427,7 +427,7 @@ bool ImageData::ReadImageIntOrFloat(cv::Mat &imgInt, const char *strFilename) co
     if (pFile==NULL)
         return false;
 
-    if (fread(imgInt.data, 4, imgInt.rows*imgInt.cols, pFile)<imgInt.rows*imgInt.cols)
+    if (fread(imgInt.data, 4, imgInt.rows*imgInt.cols, pFile) < (size_t)imgInt.rows*imgInt.cols)
     {
         fclose(pFile);
         return false;
@@ -496,7 +496,7 @@ void ImageData::computeFeaturesWithCorrCoeff(const cv::Mat &input, vector<cv::Ma
     cv::split(bgrClone, tmpSplit);            // B G R
 
     // equalize each of the RGB channels
-    for(int i = 0; i < tmpSplit.size(); ++i)
+    for(unsigned int i = 0; i < tmpSplit.size(); ++i)
         cv::equalizeHist(tmpSplit[i], tmpSplit[i]);
 
     tmpSplit.resize(numChannels);
@@ -506,7 +506,7 @@ void ImageData::computeFeaturesWithCorrCoeff(const cv::Mat &input, vector<cv::Ma
     // copy data into float array
     float *cov_feat_input = new float[input.rows * input.cols * numChannels]; //B G R I_x I_y -> results in 10 covariance feature channels
     float *d_ptr = cov_feat_input;
-    for(int c = 0; c < tmpSplit.size(); ++c)
+    for(unsigned int c = 0; c < tmpSplit.size(); ++c)
       for(int h = 0; h < input.rows; ++h)
         for(int w = 0; w < input.cols; ++w, ++d_ptr)
           *d_ptr = (float)tmpSplit[c].at<unsigned char>(h, w);
@@ -603,8 +603,8 @@ void ImageData::computeHOGLike4SingleChannel(const cv::Mat &img, vector<cv::Mat>
     short* dataX = (short*)I_x.data;
     short* dataY = (short*)I_y.data;
     uchar* dataZ = (uchar*)Itmp1.data;
-    for(size_t y = 0; y < Itmp1.rows; ++y, dataX += I_x.step1(0), dataY += I_y.step1(0), dataZ += Itmp1.step1(0))
-      for(size_t x = 0; x < Itmp1.cols; ++x)
+    for(int y = 0; y < Itmp1.rows; ++y, dataX += I_x.step1(0), dataY += I_y.step1(0), dataZ += Itmp1.step1(0))
+      for(int x = 0; x < Itmp1.cols; ++x)
       {
         // Avoid division by zero
         float tx = (float)dataX[x] + (float)_copysign(0.000001f, (float)dataX[x]);
@@ -619,8 +619,8 @@ void ImageData::computeHOGLike4SingleChannel(const cv::Mat &img, vector<cv::Mat>
     short* dataX = (short*)I_x.data;
     short* dataY = (short*)I_y.data;
     uchar* dataZ = (uchar*)Itmp2.data;
-    for(size_t y = 0; y < Itmp2.rows; ++y, dataX += I_x.step1(0), dataY += I_y.step1(0), dataZ += Itmp1.step1(0))
-      for(size_t x = 0; x < Itmp2.cols; ++x)
+    for(int y = 0; y < Itmp2.rows; ++y, dataX += I_x.step1(0), dataY += I_y.step1(0), dataZ += Itmp1.step1(0))
+      for(int x = 0; x < Itmp2.cols; ++x)
         dataZ[x] = (uchar)( sqrt((float)dataX[x]*(float)dataX[x] + (float)dataY[x]*(float)dataY[x]) );
   }
 
@@ -929,11 +929,11 @@ ImageDataSort::ImageDataSort(unsigned int nblab)
 
 bool ImageDataSort::SetData(ImageData *pData)
 {
-    unsigned int iImg, iVid, iLabel;
-    unsigned char *pPixel;
-    cv::Mat *pImgLabel;
+    unsigned int iImg, iVid;// iLabel
+    //unsigned char *pPixel;
+    //cv::Mat *pImgLabel;
     cv::Point pt;
-    VideoStat *pVS;
+    //VideoStat *pVS;
     string strInputName, strVideoName;
     string strVideoExt = ".avi";
     size_t pos;
@@ -992,6 +992,9 @@ bool ImageDataSort::SetData(ImageData *pData)
         //for (iLabel=0; iLabel<iNbLabels; iLabel++)
         //    cout<<iLabel<<": "<< pVS->vectNbSamplesPerLabel[iLabel]<<" samples"<<endl;
     }*/
+
+	// TODO : return something
+	return true;
 }
 
 void ImageDataSort::GenerateRandomSequence(vector<unsigned int> &vectIndices)

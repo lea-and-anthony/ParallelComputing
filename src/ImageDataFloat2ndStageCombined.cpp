@@ -14,7 +14,7 @@ bool ImageDataFloat2ndStageCombined::setConfiguration(ConfigReader &cfg)
 {
     double scaleFactor = cfg.rescaleFactor;
     vector<string>::iterator it, end;
-    unsigned int iImg, iFeature;
+    unsigned int iImg; // iFeature
     cv::Mat imgInput;
     cv::Mat imgSegmap1stStage, imgLabel;
     CImageCacheElement *pImgElem;

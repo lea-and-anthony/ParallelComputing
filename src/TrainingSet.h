@@ -99,7 +99,7 @@ template <typename FeatureType> class TrainingSet
                 for (pt.x=x1+1; pt.x<=x2; pt.x++, pData++)
                     sum += (int32_t)(*pData);
             }
-            return sum;
+            return (FeatureType)sum;
         }
     }
 

@@ -750,7 +750,7 @@ private:
     typename vector<LabelledSample<Sample<FeatureType>, Label> >::const_iterator sampleEnd = samples.end();
 
     importance.resize(nClasses);
-    fill(importance.begin(), importance.end(), 0);
+	fill(importance.begin(), importance.end(), (FeatureType)0);
     for (; sampleIt != sampleEnd; ++sampleIt)
     {
       ++importance[sampleIt->label.value];
