@@ -219,7 +219,7 @@ protected:
   virtual bool split(const TNode<SplitData<FeatureType>, Prediction> *node, SplitData<FeatureType> &splitData,
       Prediction &leftPrediction, Prediction &rightPrediction)
   {
-    bool doSplit = node->getNSamples() >= (2 * minSamples) && node->getDepth() < maxDepth;
+    bool doSplit = node->getNSamples() >= (uint32_t)(2 * minSamples) &&	node->getDepth() < maxDepth;
 
     if (doSplit)
     {

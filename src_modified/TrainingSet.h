@@ -55,13 +55,33 @@ template <typename FeatureType> class TrainingSet
         return (*pFeatureImages)[channel].at<FeatureType>(y, x);
     }
 
+	virtual void getFlattenedFeatures(uint16_t imageId, FeatureType **out_features, int *out_nbChannels) const
+	{
+		vector<cv::Mat> *pFeatureImages = this->pImageData->getFeatureImages(imageId);
+		assert(pFeatureImages != NULL);
+
+		FeatureType *flat = (FeatureType *)malloc(sizeof(FeatureType)*(this->iWidth)*(this->iHeight)*(this->nChannels));
+		if (flat == NULL)
+		{
+			std::cerr << "Cannot allocate flat feature data\n";
+			exit(1);
+		}
+
+		for (int c = 0; c<this->nChannels; ++c)
+			for (int x = 0; x<this->iWidth; ++x)
+				for (int y = 0; y<this->iHeight; ++y)
+					flat[y + x*(this->iHeight) + c*(this->iHeight)*(this->iWidth)] =
+					(*pFeatureImages)[c].at<FeatureType>(y, x);
+
+		*out_features = flat;
+		*out_nbChannels = this->nChannels;
+	}
+
     // returns value from integral image representation (handling of +1 for pt2 coords must be done externally!)
     virtual FeatureType getValueIntegral(uint16_t imageId, uint8_t channel, int16_t x1, int16_t y1, int16_t x2, int16_t y2) const
     {
         if (pImageData->UseIntegralImages()==true)
         {
-
-
             vector<cv::Mat> *pFeatureImages;
             cv::Mat *pFeaturesIntegral;
 
@@ -76,8 +96,8 @@ template <typename FeatureType> class TrainingSet
         	return res;
 
         }
-        else {
-
+        else
+		{
         	std::cerr << "CW: shouldn't we use integral images here???\n";
         	exit (1);
 
@@ -102,6 +122,32 @@ template <typename FeatureType> class TrainingSet
             return (FeatureType)sum;
         }
     }
+
+	virtual void getFlattenedIntegralFeatures(uint16_t imageId, FeatureType **out_features_integral, int16_t *out_w, int16_t *out_h) const
+	{
+		vector<cv::Mat> *pFeatureImages = this->pImageData->getFeatureIntegralImages(imageId);
+		assert(pFeatureImages != NULL);
+		assert(this->pImageData->UseIntegralImages() == true);
+
+		int16_t w = (*pFeatureImages)[0].cols;
+		int16_t h = (*pFeatureImages)[0].rows;
+		FeatureType *flat = (FeatureType *)malloc(sizeof(FeatureType)*w*h*(this->nChannels));
+		if (flat == NULL)
+		{
+			std::cerr << "Cannot allocate flat integral feature data\n";
+			exit(1);
+		}
+
+		for (int c = 0; c<this->nChannels; ++c)
+			for (int x = 0; x<w; ++x)
+				for (int y = 0; y<h; ++y)
+					flat[y + x*h + c*h*w] =
+					(*pFeatureImages)[c].at<FeatureType>(y, x);
+
+		*out_w = w;
+		*out_h = h;
+		*out_features_integral = flat;
+	}
 
     virtual uint8_t getLabel(uint16_t imageId, int16_t x, int16_t y) const
     {

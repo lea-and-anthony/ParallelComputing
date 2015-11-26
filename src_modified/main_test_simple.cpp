@@ -31,10 +31,15 @@
 #include "SemanticSegmentationForests.h"
 #include "StrucClassSSF.h"
 #include "label.h"
+#include "NoPointerFunctions.h"
 
 using namespace std;
 using namespace vision;
 
+// Definition of the static variable
+vector<TNode<SplitData<float>, vision::Prediction>*> TNode<SplitData<float>, vision::Prediction>::allNodesVector;
+
+typedef TNode<SplitData<FeatureType>, Prediction> Node;
 
 /***************************************************************************
  USAGE
@@ -42,7 +47,8 @@ using namespace vision;
 
 void usage (char *com) 
 {
-    std::cerr<< "usage: " << com << " <configfile> <n.o.trees> <tree-model-prefix>\n";
+    std::cerr<< "usage: " << com << " <configfile> <inputimage> <outputimage> <n.o.trees> <tree-model-prefix>\n"
+        ;
     exit(1);
 }
 
@@ -82,22 +88,23 @@ void testStructClassForest(StrucClassSSF<float> *forest, ConfigReader *cr, Train
     int iImage;
     cv::Point pt;
     cv::Mat matConfusion;
-    char strOutput[200];
+	char strOutput[200];
+	Node *allNodesArray = new Node[Node::allNodesVector.size()];
+	Node::allNodesVectorToArray(allNodesArray);
     
     // Process all test images
     // result goes into ====> result[].at<>(pt)
     for (iImage = 0; iImage < pTS->getNbImages(); ++iImage)
     {
     	// Create a sample object, which contains the imageId
-        Sample<float> s;
+        Sample<float> sample;
 
         std::cout << "Testing image nr. " << iImage+1 << "\n";
 
-        s.imageId = iImage;
-        cv::Rect box(0, 0, pTS->getImgWidth(s.imageId), pTS->getImgHeight(s.imageId));
+		sample.imageId = iImage;
+		cv::Rect box(0, 0, pTS->getImgWidth(sample.imageId), pTS->getImgHeight(sample.imageId));
         cv::Mat mapResult = cv::Mat::ones(box.size(), CV_8UC1) * cr->numLabels;
 
-        
         // ==============================================
         // THE CLASSICAL CPU SOLUTION
         // ==============================================
@@ -109,40 +116,54 @@ void testStructClassForest(StrucClassSSF<float> *forest, ConfigReader *cr, Train
         // Initialize the result matrices
         vector<cv::Mat> result(cr->numLabels);
 		for (size_t j = 0; j < result.size(); ++j)
-            result[j] = Mat::zeros(box.size(), CV_32FC1);
-        
-        // Iterate over input image pixels
-        for(s.y = 0; s.y < box.height; ++s.y)
-        for(s.x = 0; s.x < box.width; ++s.x)
-        {
-            // Obtain forest predictions
-            // Iterate over all trees
-            for(int t = 0; t < cr->numTrees; ++t)
-            {
-            	// The prediction itself.
-            	// The given Sample object s contains the imageId and the pixel coordinates.
-                // p is an iterator to a vector over labels (attribut hist of class Prediction)
-                // This labels correspond to a patch centered on position s
-                // (this is the structured version of a random forest!)
-                vector<uint32_t>::const_iterator p = forest[t].predictPtr(s);
+		{
+			result[j] = Mat::zeros(box.size(), CV_32FC1);
+		}
 
+		// Obtain forest predictions
+		// Iterate over all trees
+		for (int t = 0; t < cr->numTrees; ++t)
+		{
+			if (!forest[t].bUseRandomBoxes)
+			{
+				continue;
+			}
 
-                for (pt.y=(int)s.y-lPYOff;pt.y<=(int)s.y+(int)lPYOff;++pt.y)
-                for (pt.x=(int)s.x-(int)lPXOff;pt.x<=(int)s.x+(int)lPXOff;++pt.x,++p)
-                {
-                	if (*p<0 || *p >= (size_t)cr->numLabels)
-                	{
-                		std::cerr << "Invalid label in prediction: " << (int) *p << "\n";
-                		exit(1);
-                	}
+			FeatureType *features, *features_integral;
+			int nbChannels;
+			int16_t width_integral, height_integral;
+			pTS->getFlattenedFeatures(iImage, &features, &nbChannels);
+			pTS->getFlattenedIntegralFeatures(iImage, &features_integral, &width_integral, &height_integral);
 
-                    if (box.contains(pt))
-                    {
-                        result[*p].at<float>(pt) += 1;
+			// Iterate over input image pixels
+			for (sample.y = 0; sample.y < box.height; ++sample.y)
+			{
+				for (sample.x = 0; sample.x < box.width; ++sample.x)
+				{
+					// The prediction itself.
+					// The given Sample object s contains the imageId and the pixel coordinates.
+					// p is an iterator to a vector over labels (attribut hist of class Prediction)
+					// This labels correspond to a patch centered on position s
+					// (this is the structured version of a random forest!)
+					vector<uint32_t>::const_iterator prediction = predictNoPtr(sample, allNodesArray, features, features_integral, forest[t].getRootIdx(), box.height, box.width, height_integral, width_integral);
 
-                    }
-                }
+					for (pt.y = (int)sample.y - lPYOff; pt.y <= (int)sample.y + (int)lPYOff; ++pt.y)
+					{
+						for (pt.x = (int)sample.x - (int)lPXOff; pt.x <= (int)sample.x + (int)lPXOff; ++pt.x, ++prediction)
+						{
+							if (*prediction < 0 || *prediction >= (size_t)cr->numLabels)
+							{
+								std::cerr << "Invalid label in prediction: " << (int)*prediction << "\n";
+								exit(1);
+							}
 
+							if (box.contains(pt))
+							{
+								result[*prediction].at<float>(pt) += 1;
+							}
+						}
+					}
+				}
             }
         }
 
@@ -152,14 +173,10 @@ void testStructClassForest(StrucClassSSF<float> *forest, ConfigReader *cr, Train
         for (pt.x = 0; pt.x < box.width; ++pt.x)
         {
             maxIdx = 0;
-
-
             for(int j = 1; j < cr->numLabels; ++j)
             {
-
                 maxIdx = (result[j].at<float>(pt) > result[maxIdx].at<float>(pt)) ? j : maxIdx;
             }
-
             mapResult.at<uint8_t>(pt) = (uint8_t)maxIdx;
         }
 
@@ -169,7 +186,8 @@ void testStructClassForest(StrucClassSSF<float> *forest, ConfigReader *cr, Train
         sprintf(strOutput, "%s/segmap_1st_stage%04d.png", cr->outputFolder.c_str(), iImage);
         if (cv::imwrite(strOutput, mapResult)==false)
         {
-            cout<<"Failed to write to "<<strOutput<<endl;
+			cout << "Failed to write to " << strOutput << endl;
+			delete[] allNodesArray;
             return;
         }
 
@@ -180,10 +198,13 @@ void testStructClassForest(StrucClassSSF<float> *forest, ConfigReader *cr, Train
         sprintf(strOutput, "%s/segmap_1st_stage_RGB%04d.png", cr->outputFolder.c_str(), iImage);
         if (cv::imwrite(strOutput, imgResultRGB)==false)
         {
-            cout<<"Failed to write to "<<strOutput<<endl;
+			cout << "Failed to write to " << strOutput << endl;
+			delete[] allNodesArray;
             return;
         } 
-    }    
+    }
+
+	delete[] allNodesArray;
 }
 
 /***************************************************************************
@@ -199,7 +220,7 @@ int main(int argc, char* argv[])
     bool bTestAll = false;
     int optNumTrees=-1;
     char *optTreeFnamePrefix=NULL;
-    char buffer[2048];
+	char buffer[2048];
 
     srand((unsigned int)time(0));
     setlocale(LC_NUMERIC, "C");

@@ -143,8 +143,10 @@ class ImageData
         return iHeight;
     }
 
-    virtual vector<cv::Mat> *getFeatureImages(unsigned int);
-    virtual vector<cv::Mat> *getFeatureIntegralImages(unsigned int);
+	virtual vector<cv::Mat> *getFeatureImages(unsigned int);
+
+	virtual vector<cv::Mat> *getFeatureIntegralImages(unsigned int);
+
     virtual cv::Mat *getLabelImage(unsigned int);
     virtual string getInputImageName(unsigned int);
 
