@@ -32,6 +32,7 @@
 #include "StrucClassSSF.h"
 #include "label.h"
 #include "NoPointerFunctions.h"
+#include "kernel.h"
 
 using namespace std;
 using namespace vision;
@@ -114,10 +115,15 @@ void testStructClassForest(StrucClassSSF<float> *forest, ConfigReader *cr, Train
     	int lPYOff = cr->labelPatchHeight / 2;
 
         // Initialize the result matrices
-        vector<cv::Mat> result(cr->numLabels);
-		for (size_t j = 0; j < result.size(); ++j)
+		unsigned int maxLabel = cr->numLabels;
+		unsigned int maxRow = box.height;
+		unsigned int maxCol = box.width;
+		unsigned int resultSize = maxLabel*maxRow*maxCol;
+		// [numLabel * maxRow * maxCol + numRow * maxCol + numCol]
+		unsigned int *result = new unsigned int[resultSize];
+		for (unsigned int i = 0; i < resultSize; i++)
 		{
-			result[j] = Mat::zeros(box.size(), CV_32FC1);
+			result[i] = 0;
 		}
 
 		// Obtain forest predictions
@@ -140,47 +146,30 @@ void testStructClassForest(StrucClassSSF<float> *forest, ConfigReader *cr, Train
 			{
 				for (sample.x = 0; sample.x < box.width; ++sample.x)
 				{
-					// The prediction itself.
-					// The given Sample object s contains the imageId and the pixel coordinates.
-					// p is an iterator to a vector over labels (attribut hist of class Prediction)
-					// This labels correspond to a patch centered on position s
-					// (this is the structured version of a random forest!)
-					vector<uint32_t>::const_iterator prediction = predictNoPtr(sample, allNodesArray, features, features_integral, forest[t].getRootIdx(), box.height, box.width, height_integral, width_integral);
-
-					for (pt.y = (int)sample.y - lPYOff; pt.y <= (int)sample.y + (int)lPYOff; ++pt.y)
-					{
-						for (pt.x = (int)sample.x - (int)lPXOff; pt.x <= (int)sample.x + (int)lPXOff; ++pt.x, ++prediction)
-						{
-							if (*prediction < 0 || *prediction >= (size_t)cr->numLabels)
-							{
-								std::cerr << "Invalid label in prediction: " << (int)*prediction << "\n";
-								exit(1);
-							}
-
-							if (box.contains(pt))
-							{
-								result[*prediction].at<float>(pt) += 1;
-							}
-						}
-					}
+					kernel(sample, allNodesArray, features, features_integral, forest[t].getRootIdx(), box.height, box.width, height_integral, width_integral, (size_t)cr->numLabels, lPXOff, lPYOff, result);
 				}
-			}
+            }
 			free(features);
 			free(features_integral);
         }
 
         // Argmax of result ===> mapResult
         size_t maxIdx;
-        for (pt.y = 0; pt.y < box.height; ++pt.y)
-        for (pt.x = 0; pt.x < box.width; ++pt.x)
-        {
-            maxIdx = 0;
-            for(int j = 1; j < cr->numLabels; ++j)
-            {
-                maxIdx = (result[j].at<float>(pt) > result[maxIdx].at<float>(pt)) ? j : maxIdx;
-            }
-            mapResult.at<uint8_t>(pt) = (uint8_t)maxIdx;
-        }
+		for (pt.y = 0; pt.y < box.height; ++pt.y)
+		{
+			for (pt.x = 0; pt.x < box.width; ++pt.x)
+			{
+				maxIdx = 0;
+				for (int j = 1; j < cr->numLabels; ++j)
+				{
+					unsigned int resultJ = result[j * maxRow * maxCol + pt.y * maxCol + pt.x];
+					unsigned int resultMaxIdx = result[maxIdx * maxRow * maxCol + pt.y * maxCol + pt.x];
+					maxIdx = (resultJ > resultMaxIdx) ? j : maxIdx;
+				}
+				mapResult.at<uint8_t>(pt) = (uint8_t)maxIdx;
+			}
+		}
+		delete[] result;
 
         profiling("Prediction");
 
