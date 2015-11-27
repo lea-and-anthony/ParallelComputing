@@ -46,10 +46,12 @@ bool ImageData::setConfiguration(ConfigReader &cfg)
 
     vectImageData.resize(end-it);
 
+#ifndef SHUT_UP
     if (bGenerateFeatures==true)
         cout << "Set paths and generate HoG features for " << end-it << " images: "<<endl;
     else
         cout << "Just set paths for " << end-it << " images: "<<endl;
+#endif
 
     #if USE_CORR_COEFF
     iNbFeatures = 24;
@@ -84,8 +86,10 @@ bool ImageData::setConfiguration(ConfigReader &cfg)
         }
 
         if (bGenerateFeatures==true)
-        {
+		{
+#ifndef SHUT_UP
             cout<<"Generating features for image "<<iImg<<endl;
+#endif
 
             imgInput = cv::imread(pImgElem->strInputImage, cv::IMREAD_COLOR);
             if (imgInput.data==NULL)
@@ -124,7 +128,9 @@ bool ImageData::setConfiguration(ConfigReader &cfg)
             pImgElem->bLoaded = false;
     }
 
+#ifndef SHUT_UP
     cout<<"Image data initialized"<<endl;
+#endif
 
     return true;
 }
@@ -143,7 +149,9 @@ vector<cv::Mat> *ImageData::getFeatureImages(unsigned int iImg)
         pFeatures = &(pImgElem->vectFeatures);
     }
     else {
+#ifndef SHUT_UP
         cout<<"Loading features of image "<<iImg<<endl;
+#endif
         if (ReadImageData(iImg)==true)
         {
             pImgElem->bLoaded = true;
@@ -175,8 +183,10 @@ vector<cv::Mat> *ImageData::getFeatureIntegralImages(unsigned int iImg)
     {
         pFeatures = &(pImgElem->vectFeaturesIntegral);
     }
-    else {
+	else {
+#ifndef SHUT_UP
         cout<<"Loading features of image "<<iImg<<endl;
+#endif
         if (ReadImageData(iImg)==true)
         {
             pImgElem->bLoaded = true;
@@ -203,8 +213,10 @@ cv::Mat *ImageData::getLabelImage(unsigned int iImg)
     pImgElem = &(vectImageData[iImg]);
     if (pImgElem->bLoaded==true)
         return &(pImgElem->imgLabel);
-    else {
+	else {
+#ifndef SHUT_UP
         cout<<"Loading features of image "<<iImg<<endl;
+#endif
         if (ReadImageData(iImg)==true)
         {
             pImgElem->bLoaded = true;

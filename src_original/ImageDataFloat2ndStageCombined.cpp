@@ -35,10 +35,12 @@ bool ImageDataFloat2ndStageCombined::setConfiguration(ConfigReader &cfg)
 
     vectImageData.resize(end-it);
 
+#ifndef SHUT_UP
     if (bGenerateFeatures==true)
         cout << "Set paths and generate label features for " << end-it << " images: "<<endl;
     else
         cout << "Just set paths for " << end-it << " images: "<<endl;
+#endif
 
     iNbLabels = cfg.numLabels;
     iNbScales = NO_REGION_SCALES;

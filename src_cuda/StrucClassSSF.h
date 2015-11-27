@@ -338,7 +338,7 @@ namespace vision
 		virtual bool split(const TNode<SplitData<FeatureType>, Prediction> *node, SplitData<FeatureType> &splitData,
 			Prediction &leftPrediction, Prediction &rightPrediction)
 		{
-			bool doSplit = node->getNSamples() >= (uint32_t)(2 * this->minSamples) && node->getDepth() < this->maxDepth;
+			bool doSplit = node->getNSamples() >= (2 * this->minSamples) && node->getDepth() < this->maxDepth;
 
 			if (doSplit)
 			{
@@ -637,8 +637,8 @@ namespace vision
 			out << endl;
 			if (!node->isLeaf())
 			{
-				write(node->getLeftConst(), out);
-				write(node->getRightConst(), out);
+				write(node->getLeft(), out);
+				write(node->getRight(), out);
 			}
 		}
 

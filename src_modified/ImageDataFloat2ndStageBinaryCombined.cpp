@@ -33,10 +33,12 @@ bool ImageDataFloat2ndStageBinaryCombined::setConfiguration(ConfigReader &cfg)
 
     vectImageData.resize(end-it);
 
+#ifndef SHUT_UP
     if (bGenerateFeatures==true)
         cout << "Set paths and generate HOT1 features for " << end-it << " images: "<<endl;
     else
         cout << "Just set paths for " << end-it << " images: "<<endl;
+#endif
 
     iNbLabels = cfg.numLabels;
     iNbFeatures = pData1stStage->getNbFeatures() + iNbLabels;
@@ -57,8 +59,10 @@ bool ImageDataFloat2ndStageBinaryCombined::setConfiguration(ConfigReader &cfg)
         pImgElem->strLabelImagePath = cfg.outputFolder + "/segmap_1st_stage" + strPostfix + ".png";
 
         if (bGenerateFeatures==true)
-        {
+		{
+#ifndef SHUT_UP
             cout<<"Generating 2nd-stage HOT1 features for image "<<iImg<<endl;
+#endif
 
             imgSegmap1stStage = cv::imread(pImgElem->strLabelImagePath, cv::IMREAD_GRAYSCALE);
             if (imgSegmap1stStage.data==NULL)

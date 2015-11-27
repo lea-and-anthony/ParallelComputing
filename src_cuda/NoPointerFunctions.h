@@ -1,6 +1,8 @@
 #ifndef NO_POINTER_FUNCTIONS_H
 #define NO_POINTER_FUNCTIONS_H
 
+#include "TNodeGPU.h"
+
 namespace vision
 {
 	typedef float FeatureType;
@@ -11,7 +13,7 @@ namespace vision
 
 	SplitResult splitNoPtr(const SplitData<FeatureType> &splitData, Sample<FeatureType> &sample, FeatureType *features, FeatureType *features_integral, int16_t height, int16_t width, int16_t height_integral, int16_t width_integral);
 
-	vector<uint32_t>::const_iterator predictNoPtr(Sample<FeatureType> &sample, TNode<SplitData<FeatureType>, Prediction> *allNodesArray, FeatureType *features, FeatureType *features_integral, int idRoot, int16_t height, int16_t width, int16_t height_integral, int16_t width_integral);
+	uint32_t predictNoPtr(Sample<FeatureType> &sample, NodeGPU *tree, uint32_t *histograms, FeatureType *features, FeatureType *features_integral, int16_t height, int16_t width, int16_t height_integral, int16_t width_integral);
 }
 
 #endif

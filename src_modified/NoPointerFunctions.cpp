@@ -1,7 +1,14 @@
+#include <iostream>
 #include "NoPointerFunctions.h"
 
 namespace vision
 {
+	struct Point
+	{
+		int x;
+		int y;
+	};
+
 	FeatureType getValueNoPtr(FeatureType *features, uint8_t channel, int16_t x, int16_t y, int16_t height, int16_t width)
 	{
 		return features[y + x*height + channel*height*width];
@@ -105,7 +112,7 @@ namespace vision
 					sample.value = valueIntegral / norm1 - valueIntegral2 / norm2;
 				}
 				else
-					cout << "ERROR: Impossible case in splitData in StrucClassSSF::split(...)" << endl;
+					std::cout << "ERROR: Impossible case in splitData in StrucClassSSF::split(...)" << std::endl;
 
 #ifdef VERBOSE_PREDICTION
 				std::cerr << " new-val23= " << sample.value;
@@ -121,28 +128,30 @@ namespace vision
 		return res;
 	}
 
-	vector<uint32_t>::const_iterator predictNoPtr(Sample<FeatureType> &sample, TNode<SplitData<FeatureType>, Prediction> *allNodesArray, FeatureType *features, FeatureType *features_integral, int idRoot, int16_t height, int16_t width, int16_t height_integral, int16_t width_integral)
+	uint32_t predictNoPtr(Sample<FeatureType> &sample, NodeGPU *tree, uint32_t *histograms, FeatureType *features, FeatureType *features_integral, int16_t height, int16_t width, int16_t height_integral, int16_t width_integral)
 	{
-		TNode<SplitData<FeatureType>, Prediction> *curNode = &allNodesArray[idRoot];
-		assert(curNode != NULL);
+		NodeGPU *curNode = tree;
 		SplitResult sr = SR_LEFT;
-		while (!curNode->isLeaf() && sr != SR_INVALID)
+#pragma warning (push)
+#pragma warning (disable:4309)
+		while (curNode->idxLeft != NodeGPU::NO_IDX && !(sr == SR_INVALID))
+#pragma warning (pop)
 		{
-			sr = splitNoPtr(curNode->getSplitData(), sample, features, features_integral, height, width, height_integral, width_integral);
+			sr = splitNoPtr(curNode->splitData, sample, features, features_integral, height, width, height_integral, width_integral);
 			switch (sr)
 			{
 			case SR_LEFT:
-				curNode = curNode->getLeft();
+				curNode = &tree[curNode->idxLeft];
 				break;
 			case SR_RIGHT:
-				curNode = curNode->getRight();
+				curNode = &tree[curNode->idxRight];
 				break;
 			default:
 				break;
 			}
 		}
 
-		return curNode->getPrediction().hist.begin();
+		return curNode->idxHist;
 	}
 
 }

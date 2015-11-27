@@ -33,10 +33,12 @@ bool ImageDataFloat2ndStageBinaryCombined::setConfiguration(ConfigReader &cfg)
 
     vectImageData.resize(end-it);
 
+#ifndef SHUT_UP
     if (bGenerateFeatures==true)
         cout << "Set paths and generate HOT1 features for " << end-it << " images: "<<endl;
     else
         cout << "Just set paths for " << end-it << " images: "<<endl;
+#endif
 
     iNbLabels = cfg.numLabels;
     iNbFeatures = pData1stStage->getNbFeatures() + iNbLabels;

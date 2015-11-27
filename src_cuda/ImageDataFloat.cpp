@@ -20,10 +20,12 @@ namespace vision
     it = cfg.imageFilenames.begin();
     end = cfg.imageFilenames.end();
 
+#ifndef SHUT_UP
     if (bGenerateFeatures==true)
         cout << "Set paths and generate HoG features for " << end-it << " images: "<<endl;
     else
         cout << "Just set paths for " << end-it << " images: "<<endl;
+#endif
 
     vectImageData.resize(end-it);
 
@@ -61,7 +63,9 @@ namespace vision
 
         if (bGenerateFeatures==true)
         {
+#ifndef SHUT_UP
             cout<<"Generating features for image "<<iImg<<endl;
+#endif
 
             imgInput = cv::imread(pImgElem->strInputImage, cv::IMREAD_COLOR);
             if (imgInput.data==NULL)
@@ -100,7 +104,9 @@ namespace vision
             pImgElem->bLoaded = false;
     }
 
+#ifndef SHUT_UP
     cout<<"Image data initialized"<<endl;
+#endif
 
     return true;
 }

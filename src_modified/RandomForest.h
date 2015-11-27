@@ -22,6 +22,7 @@
 #include <stdint.h>
 
 #include "Global.h"
+#include "TNodeGPU.h"
 
 using namespace std;
 
@@ -32,49 +33,47 @@ namespace vision
 	//  Description:
 	// =====================================================================================
 
-	template<class SplitData, class Prediction> class TNode
+	template<class SplitData, class Prediction>
+	class TNode
 	{
 	public:
+		typedef TNodeGPU<SplitData> NodeGPU;
 		// ====================  LIFECYCLE     =======================================
-		static TNode<SplitData, Prediction>* CreateTNode(uint32_t start, uint32_t end)
+		TNode(int start, int end) :
+			left(NULL), right(NULL), start(start), end(end), depth(0)
 		{
-			TNode<SplitData, Prediction> *node = new TNode<SplitData, Prediction>(start, end);
-			// TODO : access idx if multithread to know where it is stored
-			allNodesVector.push_back(node);
-			return node;
-		}
+			static int iNode = 0;
+			idx = iNode++;
 
-		TNode() :
-			idxLeft(NO_IDX), idxRight(NO_IDX), start(0), end(0), depth(0)
-		{
+			// cout<<endl<<"New node "<<idx<<" "<<hex<<this<<dec<<endl;
 		}
 
 		~TNode()
 		{
+			delete left;
+			delete right;
 		}
 
 		// ====================  ACCESSORS     =======================================
 		bool isLeaf() const
 		{
-			return idxLeft == NO_IDX;
+			return left == NULL;
 		}
-
-		uint32_t getStart() const
+		int getStart() const
 		{
 			return start;
 		}
-
-		uint32_t getEnd() const
+		int getEnd() const
 		{
 			return end;
 		}
 
-		uint32_t getNSamples() const
+		int getNSamples() const
 		{
 			return end - start;
 		}
 
-		uint16_t getDepth() const
+		int getDepth() const
 		{
 			return depth;
 		}
@@ -83,56 +82,110 @@ namespace vision
 		{
 			return splitData;
 		}
-
 		const Prediction &getPrediction() const
 		{
 			return prediction;
 		}
 
-		TNode<SplitData, Prediction>* getLeft(TNode *allNodesArray) const
+		const TNode<SplitData, Prediction>* getLeft() const
 		{
-			if (idxLeft != NO_IDX && allNodesArray != NULL)
+			return left;
+		}
+
+		const TNode<SplitData, Prediction>* getRight() const
+		{
+			return right;
+		}
+
+		TNode<SplitData, Prediction>* getLeft()
+		{
+			return left;
+		}
+
+		TNode<SplitData, Prediction>* getRight()
+		{
+			return right;
+		}
+
+		uint32_t getTreeSizeBelow()
+		{
+			return 1 + (this->isLeaf() ? 0 : this->left->getTreeSizeBelow() + this->right->getTreeSizeBelow());
+		}
+
+		uint32_t getHistogramsSizeBelow()
+		{
+			return this->prediction.hist.size() + (this->isLeaf() ? 0 : this->left->getHistogramsSizeBelow() + this->right->getHistogramsSizeBelow());
+		}
+
+		void getFlattenedTree(NodeGPU **out_tree, uint32_t **out_histograms, uint32_t *out_treeSize, uint32_t *out_histSize)
+		{
+			// Create out_tree if it is the first time
+			uint32_t nbNodes = this->getTreeSizeBelow();
+			NodeGPU *flattenedTree = (NodeGPU *)malloc(sizeof(NodeGPU)*nbNodes);
+
+			uint32_t histogramsSize = this->getHistogramsSizeBelow();
+			uint32_t *flattenedHistograms = (uint32_t *)malloc(sizeof(uint32_t)*histogramsSize);
+
+			// Flatten the tree
+			uint32_t treeCounter = 0;
+			uint32_t histCounter = 0;
+			this->flattenNode(flattenedTree, flattenedHistograms, &treeCounter, &histCounter);
+
+			// Put the data in out_tree
+			*out_tree = flattenedTree;
+			*out_histograms = flattenedHistograms;
+			*out_treeSize = nbNodes;
+			*out_histSize = histogramsSize;
+		}
+
+		void flattenNode(NodeGPU *flattenedTree, uint32_t *flattenedHistograms, uint32_t *treeCounter, uint32_t *histCounter)
+		{
+			uint32_t myIdx = *treeCounter;
+			uint32_t myHistSize = this->histToGPU(flattenedHistograms, *histCounter);
+			uint32_t myHistIdx = *histCounter;
+			(*treeCounter)++;
+			*histCounter += myHistSize;
+
+			// Go through all the tree recursively
+			uint32_t idxLeft, idxRight;
+			if (this->isLeaf())
 			{
-				return &allNodesArray[idxLeft];
+				idxLeft = NodeGPU::NO_IDX;
+				idxRight = NodeGPU::NO_IDX;
 			}
-			return NULL;
-		}
-
-		TNode<SplitData, Prediction>* getLeft() const
-		{
-			if (idxLeft == NO_IDX)
+			else
 			{
-				return NULL;
+				idxLeft = *treeCounter;
+				this->left->flattenNode(flattenedTree, flattenedHistograms, treeCounter, histCounter);
+				idxRight = *treeCounter;
+				this->right->flattenNode(flattenedTree, flattenedHistograms, treeCounter, histCounter);
 			}
-			return allNodesVector[idxLeft];
+
+			// Tranform into TNodeGPU and Add to table
+			flattenedTree[myIdx] = this->nodeToGPU(myIdx, idxLeft, idxRight, myHistIdx, myHistSize);
+
+			return;
 		}
 
-		const TNode<SplitData, Prediction>* getLeftConst() const
+		NodeGPU nodeToGPU(uint32_t idx, uint32_t idxLeft, uint32_t idxRight, uint32_t histCounter, uint16_t histSize)
 		{
-			return getLeft();
+			NodeGPU nodeGPU;
+			nodeGPU.idx = idx;
+			nodeGPU.idxLeft = idxLeft;
+			nodeGPU.idxRight = idxRight;
+			nodeGPU.idxHist = histCounter;
+			nodeGPU.sizeHist = histSize;
+			memcpy(&nodeGPU.splitData, &this->splitData, sizeof(SplitData));
+			return nodeGPU;
 		}
 
-		TNode<SplitData, Prediction>* getRight(TNode *allNodesArray) const
+		uint32_t histToGPU(uint32_t *flattenedHistograms, uint32_t histCounter)
 		{
-			if (idxRight != NO_IDX && allNodesArray != NULL)
+			for (size_t i = 0; i < this->prediction.hist.size(); i++)
 			{
-				return &allNodesArray[idxRight];
+				flattenedHistograms[histCounter + i] = this->prediction.hist[i];
 			}
-			return NULL;
-		}
-
-		TNode<SplitData, Prediction>* getRight() const
-		{
-			if (idxRight == NO_IDX)
-			{
-				return NULL;
-			}
-			return allNodesVector[idxRight];
-		}
-
-		const TNode<SplitData, Prediction>* getRightConst() const
-		{
-			return getRight();
+			return this->prediction.hist.size();
 		}
 
 		// ====================  MUTATORS      =======================================
@@ -164,53 +217,35 @@ namespace vision
 		void split(uint32_t start, uint32_t middle)
 		{
 			assert(start >= this->start && middle >= start && middle <= end);
-			if (idxLeft == NO_IDX)
+			if (left == NULL)
 			{
-				idxLeft = CreateTNode(start, middle)->idx;
-				idxRight = CreateTNode(middle, end)->idx;
-				allNodesVector[idxLeft]->setDepth(depth + 1);
-				allNodesVector[idxRight]->setDepth(depth + 1);
+				left = new TNode<SplitData, Prediction>(start, middle);
+				right = new TNode<SplitData, Prediction>(middle, end);
+				left->setDepth(depth + 1);
+				right->setDepth(depth + 1);
 			}
 			else
 			{
-				allNodesVector[idxLeft]->setStart(start);
-				allNodesVector[idxLeft]->setEnd(middle);
-				allNodesVector[idxRight]->setStart(middle);
+				left->setStart(start);
+				left->setEnd(middle);
+				right->setStart(middle);
 			}
 		}
 
 		// ====================  OPERATORS     =======================================
 
-		// ====================  METHODS       =======================================
-		static void allNodesVectorToArray(TNode *allNodesArray)
-		{
-			for (size_t i = 0; i < allNodesVector.size(); i++)
-			{
-				memcpy(allNodesArray + i, allNodesVector[i], sizeof(TNode));
-			}
-		}
-
 	protected:
+		// ====================  METHODS       =======================================
 
 		// ====================  DATA MEMBERS  =======================================
 
 	private:
-		TNode(uint32_t start, uint32_t end) :
-			idxLeft(NO_IDX), idxRight(NO_IDX), start(start), end(end), depth(0)
-		{
-			static uint32_t iNode = 0;
-			idx = iNode++;
-
-			// cout<<endl<<"New node "<<idx<<" "<<hex<<this<<dec<<endl;
-		}
 		// ====================  METHODS       =======================================
 
 		// ====================  DATA MEMBERS  =======================================
-		static const uint32_t NO_IDX = -1;
 
 	public:
-		static vector<TNode*> allNodesVector;
-		uint32_t idxLeft, idxRight;
+		TNode<SplitData, Prediction> *left, *right;
 		SplitData splitData;
 		Prediction prediction;
 		uint32_t start, end;
@@ -218,7 +253,6 @@ namespace vision
 		uint32_t idx;
 
 	};
-
 	// -----  end of class TNode  -----
 
 	template<class Sample, class Label>
@@ -226,11 +260,6 @@ namespace vision
 	{
 		Sample sample;
 		Label label;
-	};
-
-	enum SplitResult
-	{
-		SR_LEFT = 0, SR_RIGHT = 1, SR_INVALID = 2
 	};
 
 	typedef vector<SplitResult> SplitResultsVector;
@@ -393,12 +422,17 @@ namespace vision
 		{
 			ifstream in(filename.c_str());
 			readHeader(in);
-			root = TNode<SplitData, Prediction>::CreateTNode(0, 0);
+			root = new TNode<SplitData, Prediction>(0, 0);
 			read(root, in);
 			bool includeSamples;
 			in >> includeSamples;
 			if (includeSamples)
 				read(this->samples, in);
+		}
+
+		TNode<SplitData, Prediction>* getRoot() const
+		{
+			return root;
 		}
 
 		// ====================  OPERATORS     =======================================
@@ -446,11 +480,6 @@ namespace vision
 		const SplitResultsVector &getSplitResults() const
 		{
 			return splitResults;
-		}
-
-		TNode<SplitData, Prediction>* getRoot() const
-		{
-			return root;
 		}
 
 		virtual void writeHeader(ostream &out) const = 0;
@@ -548,8 +577,8 @@ namespace vision
 			out << endl;
 			if (!node->isLeaf())
 			{
-				write(node->getLeftConst(), out);
-				write(node->getRightConst(), out);
+				write(node->getLeft(), out);
+				write(node->getRight(), out);
 			}
 		}
 

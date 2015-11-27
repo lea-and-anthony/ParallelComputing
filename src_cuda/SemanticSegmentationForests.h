@@ -24,6 +24,7 @@
 #include <cmath>
 #include <opencv/cv.h>
 #include <limits>
+#include "TNodeGPU.h"
 
 // #define USE_RANDOM_BOXES 1
 
@@ -32,14 +33,6 @@ using namespace cv;
 
 namespace vision
 {
-
-template <typename FeatureType> struct Sample
-{
-  int16_t x, y;
-  uint16_t imageId;
-  FeatureType value;
-};
-
 struct Label
 {
   // center label (as usual)
@@ -81,20 +74,6 @@ struct Prediction
   vector<uint32_t> hist;
   uint32_t n;
   vector<float> p;
-};
-
-template<typename FeatureType> struct SplitData
-{
-  SplitData() : dx1(0), dx2(0), dy1(0), dy2(0), channel0(0), channel1(0), fType(0), thres(0)
-  {}
-
-  int16_t dx1, dx2;
-  int16_t dy1, dy2;
-  int8_t bw1, bh1, bw2, bh2;
-  uint8_t channel0;    // number of feature channels is restricted by 255
-  uint8_t channel1;
-  uint8_t fType;           // CW: split type
-  FeatureType thres;       // short is sufficient in range
 };
 
 template<class ErrorData, typename FeatureType>
@@ -219,7 +198,7 @@ protected:
   virtual bool split(const TNode<SplitData<FeatureType>, Prediction> *node, SplitData<FeatureType> &splitData,
       Prediction &leftPrediction, Prediction &rightPrediction)
   {
-    bool doSplit = node->getNSamples() >= (uint32_t)(2 * minSamples) &&	node->getDepth() < maxDepth;
+    bool doSplit = node->getNSamples() >= (2 * minSamples) &&	node->getDepth() < maxDepth;
 
     if (doSplit)
     {
