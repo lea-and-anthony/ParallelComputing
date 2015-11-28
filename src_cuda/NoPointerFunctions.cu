@@ -1,20 +1,20 @@
 #include <iostream>
 #include "NoPointerFunctions.h"
 
-namespace vision
-{
+using namespace vision;
+
 	struct Point
 	{
 		int x;
 		int y;
 	};
 
-	FeatureType getValueNoPtr(FeatureType *features, uint8_t channel, int16_t x, int16_t y, int16_t height, int16_t width)
+	__device__ FeatureType getValueNoPtr(FeatureType *features, uint8_t channel, int16_t x, int16_t y, int16_t height, int16_t width)
 	{
 		return features[y + x*height + channel*height*width];
 	}
 
-	FeatureType getValueIntegralNoPtr(FeatureType *features_integral, uint8_t channel, int16_t x1, int16_t y1, int16_t x2, int16_t y2, int16_t h, int16_t w)
+	__device__ FeatureType getValueIntegralNoPtr(FeatureType *features_integral, uint8_t channel, int16_t x1, int16_t y1, int16_t x2, int16_t y2, int16_t h, int16_t w)
 	{
 		// TODO : Check if bUseIntegralImages is true before we go here
 		return (FeatureType)features_integral[y2 + x2*h + channel*h*w] -
@@ -26,7 +26,7 @@ namespace vision
 	// #if USE_RANDOM_BOXES
 	// begin random probe box splits modification
 	// split function using the randomly selected box parameters
-	SplitResult splitNoPtr(const SplitData<FeatureType> &splitData, Sample<FeatureType> &sample, FeatureType *features, FeatureType *features_integral, int16_t height, int16_t width, int16_t height_integral, int16_t width_integral)
+	__device__ SplitResult splitNoPtr(const SplitData<FeatureType> &splitData, Sample<FeatureType> &sample, FeatureType *features, FeatureType *features_integral, int16_t height, int16_t width, int16_t height_integral, int16_t width_integral)
 	{
 		sample.value = getValueNoPtr(features, splitData.channel0, sample.x, sample.y, height, width);
 		SplitResult centerResult = (sample.value < splitData.thres) ? SR_LEFT : SR_RIGHT;
@@ -111,8 +111,8 @@ namespace vision
 				{
 					sample.value = valueIntegral / norm1 - valueIntegral2 / norm2;
 				}
-				else
-					std::cout << "ERROR: Impossible case in splitData in StrucClassSSF::split(...)" << std::endl;
+				//else
+					//std::cout << "ERROR: Impossible case in splitData in StrucClassSSF::split(...)" << std::endl;
 
 #ifdef VERBOSE_PREDICTION
 				std::cerr << " new-val23= " << sample.value;
@@ -128,7 +128,7 @@ namespace vision
 		return res;
 	}
 
-	uint32_t predictNoPtr(Sample<FeatureType> &sample, NodeGPU *tree, uint32_t *histograms, FeatureType *features, FeatureType *features_integral, int16_t height, int16_t width, int16_t height_integral, int16_t width_integral)
+	__device__ uint32_t predictNoPtr(Sample<FeatureType> &sample, NodeGPU *tree, uint32_t *histograms, FeatureType *features, FeatureType *features_integral, int16_t height, int16_t width, int16_t height_integral, int16_t width_integral)
 	{
 		NodeGPU *curNode = tree;
 		SplitResult sr = SR_LEFT;
@@ -153,5 +153,3 @@ namespace vision
 
 		return curNode->idxHist;
 	}
-
-}

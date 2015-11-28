@@ -18,9 +18,11 @@
 #include <io.h>
 #else
 #include <unistd.h>
-#include <omp.h>
 #endif
 
+#ifdef _OPENMP
+#include <omp.h>
+#endif
 #include <iostream>
 #include <sys/stat.h>
 

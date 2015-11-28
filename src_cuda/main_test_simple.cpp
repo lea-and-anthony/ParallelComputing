@@ -18,6 +18,9 @@
 #include <io.h>
 #else
 #include <unistd.h>
+#endif
+
+#ifdef _OPENMP
 #include <omp.h>
 #endif
 
@@ -153,16 +156,13 @@ void testStructClassForest(StrucClassSSF<float> *forest, ConfigReader *cr, Train
 			uint32_t treeSize, histSize;
 			forest[t].getRoot()->getFlattenedTree(&tree, &histograms, &treeSize, &histSize);
 
-			// Iterate over input image pixels
-			for (sample.y = 0; sample.y < box.height; ++sample.y)
-			{
-				for (sample.x = 0; sample.x < box.width; ++sample.x)
-				{
-					kernel(sample, tree, histograms, features, features_integral, box.height, box.width, height_integral, width_integral, (size_t)cr->numLabels, lPXOff, lPYOff, result);
-				}
-            }
+			// GPU kernel
+			startKernel(sample, tree, treeSize, histograms, histSize, features, box.width*box.height*nbChannels, box.height, box.width, features_integral, width_integral*height_integral*nbChannels, height_integral, width_integral, (size_t)cr->numLabels, lPXOff, lPYOff, result);
+
 			free(features);
 			free(features_integral);
+			free(tree);
+			free(histograms);
         }
 
         // Argmax of result ===> mapResult

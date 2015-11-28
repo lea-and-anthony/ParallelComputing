@@ -18,9 +18,11 @@
 #include <io.h>
 #else
 #include <unistd.h>
-#include <omp.h>
 #endif
 
+#ifdef _OPENMP
+#include <omp.h>
+#endif
 #include <iostream>
 #include <sys/stat.h>
 
@@ -163,6 +165,8 @@ void testStructClassForest(StrucClassSSF<float> *forest, ConfigReader *cr, Train
             }
 			free(features);
 			free(features_integral);
+			free(tree);
+			free(histograms);
         }
 
         // Argmax of result ===> mapResult
