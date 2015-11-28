@@ -117,13 +117,19 @@ void startKernel(Sample<FeatureType> &sample, NodeGPU *tree, uint32_t treeSize, 
 	return;
 }
 
-__global__ void kernel(Sample<FeatureType> &sample, NodeGPU *tree, uint32_t *histograms, FeatureType *features, FeatureType *features_integral, int16_t height, int16_t width, int16_t height_integral, int16_t width_integral, size_t numLabels, int lPXOff, int lPYOff, unsigned int *out_result)
+__global__ void kernel(Sample<FeatureType> sample, NodeGPU *tree, uint32_t *histograms, FeatureType *features, FeatureType *features_integral, int16_t height, int16_t width, int16_t height_integral, int16_t width_integral, size_t numLabels, int lPXOff, int lPYOff, unsigned int *out_result)
 {
-	// The prediction itself.
-	// The given Sample object s contains the imageId and the pixel coordinates.
-	// p is an iterator to a vector over labels (attribut hist of class Prediction)
-	// This labels correspond to a patch centered on position s
-	// (this is the structured version of a random forest!)
+	sample.x = blockIdx.x*blockDim.x + threadIdx.x;
+	if (sample.x >= width)
+	{
+		return;
+	}
+	sample.y = blockIdx.y*blockDim.y + threadIdx.y;
+	if (sample.y >= height)
+	{
+		return;
+	}
+
 	uint32_t histIterator = predictNoPtr(sample, tree, histograms, features, features_integral, height, width, height_integral, width_integral);
 
 	for (int y = (int)sample.y - lPYOff; y <= (int)sample.y + lPYOff; ++y)

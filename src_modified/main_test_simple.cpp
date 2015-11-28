@@ -67,9 +67,9 @@ inline float profiling (const char *s, clock_t *whichClock=NULL)
     float res = (float) (newClock-*whichClock) / (float) CLOCKS_PER_SEC;
 	if (s != NULL)
 #ifdef SHUT_UP
-		std::cout << s << ": " << res << std::endl; 
+		std::cout << s << " : " << res << std::endl; 
 #else
-        std::cout << "Time: " << s << ": " << res << std::endl; 
+        std::cout << "Time : " << s << " : " << res << std::endl; 
 #endif
     *whichClock = newClock;
     return res;
@@ -81,9 +81,9 @@ inline float profilingTime (const char *s, time_t *whichClock)
     float res = (float) (newTime-*whichClock);
 	if (s != NULL)
 #ifdef SHUT_UP
-		std::cout << s << ": " << res << std::endl;
+		std::cout << s << " : " << res << std::endl;
 #else
-		std::cout << "Time(real): " << s << ": " << res << std::endl;
+		std::cout << "Time(real) : " << s << " : " << res << std::endl;
 #endif
     return res;
 }
@@ -187,7 +187,9 @@ void testStructClassForest(StrucClassSSF<float> *forest, ConfigReader *cr, Train
 		}
 		delete[] result;
 
-		string profilingLabel = "Prediction for image " + to_string((long double)(iImage + 1));
+		stringstream ss;
+		ss << (iImage + 1);
+		string profilingLabel = "Prediction for image " + ss.str();
 		profiling(profilingLabel.c_str());
 
         // Write segmentation map

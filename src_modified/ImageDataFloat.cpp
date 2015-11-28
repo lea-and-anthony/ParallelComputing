@@ -237,41 +237,49 @@ void ImageDataFloat::computeFeaturesWithCorrCoeff(const cv::Mat &input, vector<c
     input.convertTo(inputF, CV_32FC3);
     inputF /= 255.0f;
 
-    // get LAB channels
-    cv::Mat bgrClone, labImg;
+	// get LAB channels
+	cv::Mat bgrClone, labImg;
+	vector<cv::Mat> imgFeaturesCpy(3);
 
-    cv::GaussianBlur(inputF, bgrClone, cv::Size(5,5), 1.0);
-    cv::cvtColor(bgrClone, labImg, COLOR_LBGR2Lab);
-    cv::split(labImg, imgFeatures);
+	cv::GaussianBlur(inputF, bgrClone, cv::Size(5, 5), 1.0);
+	cv::cvtColor(bgrClone, labImg, COLOR_LBGR2Lab);
+	cv::split(labImg, imgFeaturesCpy);
 
-    // CArray2DFloatWnd::Show(imgFeatures[0], "L");
-    // CArray2DFloatWnd::Show(imgFeatures[1], "a");
-    // CArray2DFloatWnd::Show(imgFeatures[2], "b");
-    // equalize L channel
-    // equalizeHist(imgFeatures[0], imgFeatures[0]);
+	// CArray2DFloatWnd::Show(imgFeatures[0], "L");
+	// CArray2DFloatWnd::Show(imgFeatures[1], "a");
+	// CArray2DFloatWnd::Show(imgFeatures[2], "b");
+	// equalize L channel
+	// equalizeHist(imgFeatures[0], imgFeatures[0]);
 
-    int numChannels = 5; // number of channels used for correlation coefficient computation
+	int numChannels = 5; // number of channels used for correlation coefficient computation
 
-    // L, L_x, L_y, L_xx, L_yy, HOG_L
-    imgFeatures.resize(1 + 4 + 9 + (int)((numChannels * (numChannels-1)) / 2));
-    for(unsigned int c = 3; c < imgFeatures.size(); ++c)
-      imgFeatures[c] = cv::Mat::zeros(input.size(), CV_32F);
+	imgFeatures.resize(1 + 4 + 9 + (int)((numChannels * (numChannels - 1)) / 2));
+	imgFeatures[0] = imgFeaturesCpy[0];
+	imgFeatures[1] = imgFeaturesCpy[1];
+	imgFeatures[2] = imgFeaturesCpy[2];
+	for (unsigned int c = 3; c < imgFeatures.size(); ++c)
+	{
+		imgFeatures[c] = cv::Mat::zeros(input.size(), CV_32F);
+	}
 
-    int offset = 1;
-    computeHOGLike4SingleChannel(imgFeatures[0], imgFeatures, offset, true, true);
+	int offset = 1;
+	computeHOGLike4SingleChannel(imgFeatures[0], imgFeatures, offset, true, true);
 
-    // compute correlation coefficients between B,G,R,L_dx,L_dy
-    offset = 14;
-    vector<cv::Mat> tmpSplit;
-    split(bgrClone, tmpSplit);            // B G R
+	// compute correlation coefficients between B,G,R,L_dx,L_dy
+	offset = 14;
+	vector<cv::Mat> tmpSplit, tmpSplitCpy(3);
+	split(bgrClone, tmpSplitCpy);            // B G R
 
-    // equalize each of the RGB channels
-    //for(int i = 0; i < tmpSplit.size(); ++i)
-    //  equalizeHist(tmpSplit[i], tmpSplit[i]);
+	// equalize each of the RGB channels
+	//for(int i = 0; i < tmpSplit.size(); ++i)
+	//  equalizeHist(tmpSplit[i], tmpSplit[i]);
 
-    tmpSplit.resize(numChannels);
-    tmpSplit[3] = imgFeatures[1].clone(); // L_x
-    tmpSplit[4] = imgFeatures[2].clone(); // L_y
+	tmpSplit.resize(numChannels);
+	tmpSplit[0] = tmpSplitCpy[0];
+	tmpSplit[1] = tmpSplitCpy[1];
+	tmpSplit[2] = tmpSplitCpy[2];
+	tmpSplit[3] = imgFeatures[1].clone(); // L_x
+	tmpSplit[4] = imgFeatures[2].clone(); // L_y
 
     // copy data into float array
     float *cov_feat_input = new float[input.rows * input.cols * numChannels]; //B G R I_x I_y -> results in 10 covariance feature channels
