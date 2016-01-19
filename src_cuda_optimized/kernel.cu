@@ -42,9 +42,14 @@ void startKernel(void *forest, int numTrees, Sample<FeatureType> &sample, Featur
 	hostGetDevicePointer((void**)&features_integralGPU, (void*)features_integral);
 
 	// Memory transfer for out_result
-	/*for (unsigned int i = 0; i < resultSize; i++)
+	/*for (unsigned int i = 0; i < width*height*numLabels; i++)
 	{
-		result[i] = 0;
+		out_result[i] = 0;
+	}
+	unsigned int *out_resultGPU = NULL;
+	if(!transferMemory((void**) &out_resultGPU, (void*) out_result, width*height*numLabels*sizeof(unsigned int)))
+	{
+		return;
 	}*/
 	unsigned int *out_resultGPU = NULL;
 	cudaError_t cudaStatus;
@@ -62,6 +67,7 @@ void startKernel(void *forest, int numTrees, Sample<FeatureType> &sample, Featur
 	dim3 dimBlock(SIZE_BLOCK, SIZE_BLOCK);
 	dim3 dimGrid((int)ceil(width * 1.0f / SIZE_BLOCK), (int)ceil(height * 1.0f / SIZE_BLOCK));
 	initKernel << <dimGrid, dimBlock >> > (height, width, numLabels, out_resultGPU);
+	cudaDeviceSynchronize();
 
 	for (int t = 0; t < numTrees; ++t)
 	{
@@ -88,10 +94,8 @@ void startKernel(void *forest, int numTrees, Sample<FeatureType> &sample, Featur
 		hostGetDevicePointer((void**)&histogramsGPU, (void*)histograms);
 
 		// Kernel launch
-		cudaDeviceSynchronize();
 		kernel << <dimGrid, dimBlock >> > (sample, treeGPU, histogramsGPU, featuresGPU, features_integralGPU, height, width, height_integral, width_integral, numLabels, lPXOff, lPYOff, out_resultGPU);
 	}
-
 	cudaDeviceSynchronize();
 
 	// Kernel end

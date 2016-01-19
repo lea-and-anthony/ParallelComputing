@@ -144,7 +144,8 @@ __global__ void kernel(Sample<FeatureType> sample, NodeGPU *tree, uint32_t *hist
 
 			if (x >= 0 && x < width && y >= 0 && y < height)
 			{
-				out_result[histograms[histIterator] * height * width + y * width + x]++;
+				atomicAdd(out_result + (histograms[histIterator] * height * width + y * width + x), 1);
+				// out_result[histograms[histIterator] * height * width + y * width + x]++;
 			}
 		}
 	}
