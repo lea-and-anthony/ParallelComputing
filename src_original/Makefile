@@ -4,8 +4,8 @@ LD = g++
 WARNGCC= -Wno-sign-compare -Wno-reorder -Wno-unknown-pragmas -Wno-overloaded-virtual
 
 # --- With optimisation
-CPPFLAGS = -std=c++0x -DNDEBUG -O3 -msse2 -Wall $(WARNGCC)
-LDFLAGS = -DNEBUG -O3 -msse2
+CPPFLAGS = -std=c++0x -DNDEBUG -DSHUT_UP -O3 -msse2 -Wall $(WARNGCC)
+LDFLAGS = -DNEBUG -DSHUT_UP -O3 -msse2
 
 # --- Debugging
 #CPPFLAGS = -std=c++0x -g -Wall $(WARNGCC) 
