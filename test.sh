@@ -7,7 +7,8 @@ make testcpu
 cd ../src_cuda
 echo --------------------------------- CUDA VERSION ---------------------------------
 make testgpu
-#cd ../src_cuda_optimized
-#echo ---------------------------- CUDA OPTIMIZED VERSION ----------------------------
-#make testgpu
+cd ../src_cuda_optimized
+echo ---------------------------- CUDA OPTIMIZED VERSION ----------------------------
+make testgpu
+cd ..
 

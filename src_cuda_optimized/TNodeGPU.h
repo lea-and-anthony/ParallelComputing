@@ -46,6 +46,6 @@ struct TNodeGPU
 
 };
 
-typedef TNodeGPU<vision::SplitData<float>> NodeGPU;
+typedef TNodeGPU<vision::SplitData<float> > NodeGPU;
 
 #endif
