@@ -16,6 +16,7 @@ bool transferMemory(void** dest, void* src, size_t size)
 	if (cudaStatus != cudaSuccess)
 	{
 		cudaDisplayError("cudaMalloc", cudaStatus);
+		*dest = NULL;
 		return false;
 	}
 	cudaStatus = cudaMemcpy(*dest, src, size, cudaMemcpyHostToDevice);
@@ -23,6 +24,7 @@ bool transferMemory(void** dest, void* src, size_t size)
 	{
 		cudaDisplayError("cudaMemcpy", cudaStatus);
 		cudaFree(dest);
+		*dest = NULL;
 		return false;
 	}
 	return true;
@@ -35,11 +37,20 @@ void startKernel(void *forest, int numTrees, Sample<FeatureType> &sample, Featur
 
 	// Memory transfer for features
 	FeatureType *featuresGPU = NULL;
-	hostGetDevicePointer((void**)&featuresGPU, (void*)features);
+	bool success = transferMemory((void**)&featuresGPU, (void*)features, featuresSize*sizeof(FeatureType));
+	if (!success)
+	{
+		return;
+	}
 
 	// Memory transfer for features_integral
 	FeatureType *features_integralGPU = NULL;
-	hostGetDevicePointer((void**)&features_integralGPU, (void*)features_integral);
+	success = transferMemory((void**)&features_integralGPU, (void*)features_integral, featuresIntegralSize*sizeof(FeatureType));
+	if (!success)
+	{
+		cudaFree(featuresGPU);
+		return;
+	}
 
 	// Memory transfer for out_result
 	/*for (unsigned int i = 0; i < resultSize; i++)
@@ -76,17 +87,25 @@ void startKernel(void *forest, int numTrees, Sample<FeatureType> &sample, Featur
 		uint32_t *histograms;
 		uint32_t treeSize, histSize;
 		getFlattenedTree(forest, t, &tree, &histograms, &treeSize, &histSize);
-		treeHist[2 * t] = (void*)tree;
-		treeHist[2 * t + 1] = (void*)histograms;
 
 		// GPU kernel
 		// Memory transfer for tree
 		NodeGPU *treeGPU = NULL;
-		hostGetDevicePointer((void**)&treeGPU, (void*)tree);
+		success = transferMemory((void**)&treeGPU, (void*)tree, treeSize*sizeof(NodeGPU));
+		treeHist[2 * t] = (void*)tree;
+		if (!success)
+		{
+			continue;
+		}
 
 		// Memory transfer for histograms
 		uint32_t *histogramsGPU = NULL;
-		hostGetDevicePointer((void**)&histogramsGPU, (void*)histograms);
+		success = transferMemory((void**)&histogramsGPU, (void*)histograms, histSize*sizeof(uint32_t));
+		treeHist[2 * t + 1] = (void*)histograms;
+		if (!success)
+		{
+			continue;
+		}
 
 		// Kernel launch
 		kernel << <dimGrid, dimBlock >> > (sample, treeGPU, histogramsGPU, featuresGPU, features_integralGPU, height, width, height_integral, width_integral, numLabels, lPXOff, lPYOff, out_resultGPU);
@@ -100,8 +119,13 @@ void startKernel(void *forest, int numTrees, Sample<FeatureType> &sample, Featur
 	{
 		cudaDisplayError("cudaGetLastError", cudaStatus);
 		for (int t = 0; t < 2 * numTrees; ++t)
-			hostFree(treeHist[t]);
+		{
+			if (treeHist[t] != NULL)
+				cudaFree(treeHist[t]);
+		}
 
+		cudaFree(featuresGPU);
+		cudaFree(features_integralGPU);
 		cudaFree((void*)out_resultGPU);
 		return;
 	}
@@ -112,16 +136,26 @@ void startKernel(void *forest, int numTrees, Sample<FeatureType> &sample, Featur
 	{
 		cudaDisplayError("cudaMemcpy", cudaStatus);
 		for (int t = 0; t < 2 * numTrees; ++t)
-			hostFree(treeHist[t]);
+		{
+			if (treeHist[t] != NULL)
+				cudaFree(treeHist[t]);
+		}
 
+		cudaFree(featuresGPU);
+		cudaFree(features_integralGPU);
 		cudaFree((void*)out_resultGPU);
 		return;
 	}
 
 	// Memory free
-	for (int t = 0; t < 2*numTrees; ++t)
-		hostFree(treeHist[t]);
+	for (int t = 0; t < 2 * numTrees; ++t)
+	{
+		if (treeHist[t] != NULL)
+			cudaFree(treeHist[t]);
+	}
 
+	cudaFree(featuresGPU);
+	cudaFree(features_integralGPU);
 	cudaFree((void*)out_resultGPU);
 }
 /*

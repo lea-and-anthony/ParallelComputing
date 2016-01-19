@@ -13,5 +13,9 @@ cmd /Q /C echo y^> "%temp%\answer.tmp" ^& (.\test.bat ^< "%temp%\answer.tmp") ^&
 echo.
 echo ---------------------------- CUDA OPTIMIZED VERSION ---------------------------
 cd ..\src_cuda_optimized
+cmd /Q /C echo y^> "%temp%\answer.tmp" ^& (.\test.bat ^< "%temp%\answer.tmp") ^& del "%temp%\answer.tmp"
+echo.
+echo ------------------------ CUDA OPTIMIZED VERSION NO HOST -----------------------
+cd ..\src_cuda_optimized_nohost
 cmd /Q /C .\test.bat
 cd ..\
