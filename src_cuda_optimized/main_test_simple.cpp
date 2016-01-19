@@ -129,41 +129,20 @@ void testStructClassForest(StrucClassSSF<float> *forest, ConfigReader *cr, Train
 		unsigned int resultSize = maxLabel*maxRow*maxCol;
 		// [numLabel * maxRow * maxCol + numRow * maxCol + numCol]
 		unsigned int *result = new unsigned int[resultSize];
-		for (unsigned int i = 0; i < resultSize; i++)
-		{
-			result[i] = 0;
-		}
+
+		// Flatten features
+		FeatureType *features, *features_integral;
+		int nbChannels;
+		int16_t width_integral, height_integral;
+		pTS->getFlattenedFeatures(iImage, &features, &nbChannels);
+		pTS->getFlattenedIntegralFeatures(iImage, &features_integral, &width_integral, &height_integral);
 
 		// Obtain forest predictions
 		// Iterate over all trees
-		for (int t = 0; t < cr->numTrees; ++t)
-		{
-			if (!forest[t].bUseRandomBoxes)
-			{
-				continue;
-			}
+		startKernel((void*)forest, cr->numTrees, sample, features, box.width*box.height*nbChannels, box.height, box.width, features_integral, width_integral*height_integral*nbChannels, height_integral, width_integral, (size_t)cr->numLabels, lPXOff, lPYOff, result);
 
-			// Flatten features
-			FeatureType *features, *features_integral;
-			int nbChannels;
-			int16_t width_integral, height_integral;
-			pTS->getFlattenedFeatures(iImage, &features, &nbChannels);
-			pTS->getFlattenedIntegralFeatures(iImage, &features_integral, &width_integral, &height_integral);
-
-			// Flatten tree
-			NodeGPU *tree;
-			uint32_t *histograms;
-			uint32_t treeSize, histSize;
-			forest[t].getRoot()->getFlattenedTree(&tree, &histograms, &treeSize, &histSize);
-
-			// GPU kernel
-			startKernel(sample, tree, treeSize, histograms, histSize, features, box.width*box.height*nbChannels, box.height, box.width, features_integral, width_integral*height_integral*nbChannels, height_integral, width_integral, (size_t)cr->numLabels, lPXOff, lPYOff, result);
-
-			free(features);
-			free(features_integral);
-			free(tree);
-			free(histograms);
-        }
+		hostFree(features);
+		hostFree(features_integral);
 
         // Argmax of result ===> mapResult
         size_t maxIdx;
@@ -209,6 +188,18 @@ void testStructClassForest(StrucClassSSF<float> *forest, ConfigReader *cr, Train
     }
 }
 
+void getFlattenedTree(void *forest_void, int numTree, NodeGPU **out_tree, uint32_t **out_histograms, uint32_t *out_treeSize, uint32_t *out_histSize)
+{
+	StrucClassSSF<float> *forest = (StrucClassSSF<float> *) forest_void;
+	forest[numTree].getRoot()->getFlattenedTree(out_tree, out_histograms, out_treeSize, out_histSize);
+}
+
+bool getUseRandomBoxesFromTree(void *forest_void, int numTree)
+{
+	StrucClassSSF<float> *forest = (StrucClassSSF<float> *) forest_void;
+	return forest[numTree].bUseRandomBoxes;
+}
+
 /***************************************************************************
  MAIN PROGRAM
  ***************************************************************************/
@@ -248,7 +239,13 @@ int main(int argc, char* argv[])
     {
         cout<<"Failed to read config file "<<strConfigFile<<endl;
         return -1;
-    }
+	}
+
+	if (!canMapHostMemory())
+	{
+		cout << "Cannot map host memory" << endl;
+		return -1;
+	}
 
     // Load image data
     idata->bGenerateFeatures = true;
