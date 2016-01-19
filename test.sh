@@ -10,5 +10,8 @@ make testgpu
 cd ../src_cuda_optimized
 echo ---------------------------- CUDA OPTIMIZED VERSION ----------------------------
 make testgpu
+cd ../src_cuda_optimized_nohost
+echo ------------------------ CUDA OPTIMIZED VERSION NO HOST ------------------------
+make testgpu
 cd ..
 
