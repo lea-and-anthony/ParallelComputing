@@ -69,7 +69,8 @@ void startKernel(void *forest, int numTrees, Sample<FeatureType> &sample, Featur
 	int minGridSize = 0;
 	int SIZE_BLOCK = 10;
 	cudaOccupancyMaxPotentialBlockSize(&minGridSize, &SIZE_BLOCK, (void*)kernel);
-	SIZE_BLOCK = sqrt(SIZE_BLOCK) / 2;
+	SIZE_BLOCK = sqrt(SIZE_BLOCK);
+	//std::cout << "SIZE_BLOCK = " << SIZE_BLOCK << std::endl;
 	dim3 dimBlock(SIZE_BLOCK, SIZE_BLOCK);
 	dim3 dimGrid((int)ceil(width * 1.0f / SIZE_BLOCK), (int)ceil(height * 1.0f / SIZE_BLOCK));
 	initKernel << <dimGrid, dimBlock >> > (height, width, numLabels, out_resultGPU);
