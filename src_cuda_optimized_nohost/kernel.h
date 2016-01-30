@@ -17,6 +17,6 @@ void startKernel(void *forest, int numTrees, Sample<FeatureType> &sample, Featur
 
 __global__ void initKernel(int16_t height, int16_t width, size_t numLabels, unsigned int *out_result);
 
-__global__ void kernel(Sample<FeatureType> sample, NodeGPU *tree, uint32_t *treeOffset, uint32_t *histograms, uint32_t *histOffset, FeatureType *features, int16_t width, int16_t height, FeatureType *features_integral, int16_t width_integral, int16_t height_integral, size_t numLabels, int lPXOff, int lPYOff, unsigned int *out_result);
+__global__ void kernel(Sample<FeatureType> sample, NodeGPU *tree, uint32_t *histograms, FeatureType *features, FeatureType *features_integral, int16_t height, int16_t width, int16_t height_integral, int16_t width_integral, size_t numLabels, int lPXOff, int lPYOff, unsigned int *out_result);
 
 #endif
