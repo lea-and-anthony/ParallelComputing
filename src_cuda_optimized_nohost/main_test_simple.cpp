@@ -112,6 +112,7 @@ void testStructClassForest(StrucClassSSF<float> *forest, ConfigReader *cr, Train
 
 		sample.imageId = iImage;
 		cv::Rect box(0, 0, pTS->getImgWidth(sample.imageId), pTS->getImgHeight(sample.imageId));
+        cv::Mat mapResult = cv::Mat::ones(box.size(), CV_8UC1) * cr->numLabels;
 
         // ==============================================
         // THE CLASSICAL CPU SOLUTION
@@ -120,6 +121,14 @@ void testStructClassForest(StrucClassSSF<float> *forest, ConfigReader *cr, Train
         profiling(NULL);
         int lPXOff = cr->labelPatchWidth / 2;
     	int lPYOff = cr->labelPatchHeight / 2;
+
+        // Initialize the result matrices
+		unsigned int maxLabel = cr->numLabels;
+		unsigned int maxRow = box.height;
+		unsigned int maxCol = box.width;
+		unsigned int resultSize = maxLabel*maxRow*maxCol;
+		// [numLabel * maxRow * maxCol + numRow * maxCol + numCol]
+		unsigned int *result = new unsigned int[resultSize];
 
 		// Flatten features
 		FeatureType *features, *features_integral;
@@ -130,15 +139,28 @@ void testStructClassForest(StrucClassSSF<float> *forest, ConfigReader *cr, Train
 
 		// Obtain forest predictions
 		// Iterate over all trees
-		unsigned char* mapResultData = startKernel((void*)forest, cr->numTrees, sample, features, box.width*box.height*nbChannels, box.width, box.height, features_integral, width_integral*height_integral*nbChannels, width_integral, height_integral, (size_t)cr->numLabels, lPXOff, lPYOff);
-		if (mapResultData == NULL)
-		{
-			return;
-		}
-		cv::Mat mapResult(box.size(), CV_8UC1, mapResultData);
+		startKernel((void*)forest, cr->numTrees, sample, features, box.width*box.height*nbChannels, box.height, box.width, features_integral, width_integral*height_integral*nbChannels, height_integral, width_integral, (size_t)cr->numLabels, lPXOff, lPYOff, result);
 
 		free(features);
 		free(features_integral);
+
+        // Argmax of result ===> mapResult
+        size_t maxIdx;
+		for (pt.y = 0; pt.y < box.height; ++pt.y)
+		{
+			for (pt.x = 0; pt.x < box.width; ++pt.x)
+			{
+				maxIdx = 0;
+				for (int j = 1; j < cr->numLabels; ++j)
+				{
+					unsigned int resultJ = result[j * maxRow * maxCol + pt.y * maxCol + pt.x];
+					unsigned int resultMaxIdx = result[maxIdx * maxRow * maxCol + pt.y * maxCol + pt.x];
+					maxIdx = (resultJ > resultMaxIdx) ? j : maxIdx;
+				}
+				mapResult.at<uint8_t>(pt) = (uint8_t)maxIdx;
+			}
+		}
+		delete[] result;
 
 		stringstream ss;
 		ss << (iImage + 1);
@@ -150,7 +172,6 @@ void testStructClassForest(StrucClassSSF<float> *forest, ConfigReader *cr, Train
         if (cv::imwrite(strOutput, mapResult)==false)
         {
 			cout << "Failed to write to " << strOutput << endl;
-			delete[] mapResultData;
             return;
         }
 
@@ -162,11 +183,8 @@ void testStructClassForest(StrucClassSSF<float> *forest, ConfigReader *cr, Train
         if (cv::imwrite(strOutput, imgResultRGB)==false)
         {
 			cout << "Failed to write to " << strOutput << endl;
-			delete[] mapResultData;
             return;
-        }
-
-		delete[] mapResultData;
+        } 
     }
 }
 
