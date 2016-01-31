@@ -226,7 +226,7 @@ __global__ void kernel(Sample<FeatureType> sample, NodeGPU *tree, uint32_t *tree
 
 	int numTree = blockIdx.z;
 
-	uint32_t histIterator = predictNoPtr(sample, &tree[treeOffset[numTree]], &histograms[histOffset[numTree], features, features_integral, height, width, height_integral, width_integral);
+	uint32_t histIterator = predictNoPtr(sample, &tree[treeOffset[numTree]], &histograms[histOffset[numTree]], features, features_integral, height, width, height_integral, width_integral);
 	histIterator += histOffset[numTree];
 
 	for (int y = (int)sample.y - lPYOff; y <= (int)sample.y + lPYOff; ++y)
