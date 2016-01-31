@@ -316,7 +316,7 @@ int main(int argc, char* argv[])
 #endif
 
 #ifdef _WIN32
-	//system("PAUSE");
+	system("PAUSE");
 #endif
 
 	cudaDeviceReset();

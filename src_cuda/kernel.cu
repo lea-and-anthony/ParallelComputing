@@ -84,7 +84,7 @@ void startKernel(Sample<FeatureType> &sample, NodeGPU *tree, uint32_t treeSize, 
 	}
 
 	// Kernel launch
-	const int SIZE_BLOCK = 32;
+	const int SIZE_BLOCK = 16;
 	dim3 dimBlock(SIZE_BLOCK, SIZE_BLOCK);
 	dim3 dimGrid((int)ceil(width * 1.0f / SIZE_BLOCK), (int)ceil(height * 1.0f / SIZE_BLOCK));
 	kernel << <dimGrid, dimBlock >> > (sample, treeGPU, histogramsGPU, featuresGPU, features_integralGPU, height, width, height_integral, width_integral, numLabels, lPXOff, lPYOff, out_resultGPU);
