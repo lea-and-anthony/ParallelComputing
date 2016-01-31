@@ -141,8 +141,8 @@ void testStructClassForest(StrucClassSSF<float> *forest, ConfigReader *cr, Train
 		// Iterate over all trees
 		startKernel((void*)forest, cr->numTrees, sample, features, box.width*box.height*nbChannels, box.height, box.width, features_integral, width_integral*height_integral*nbChannels, height_integral, width_integral, (size_t)cr->numLabels, lPXOff, lPYOff, result);
 
-		hostFree(features);
-		hostFree(features_integral);
+		free(features);
+		free(features_integral);
 
         // Argmax of result ===> mapResult
         size_t maxIdx;

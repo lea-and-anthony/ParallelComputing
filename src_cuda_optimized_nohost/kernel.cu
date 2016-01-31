@@ -33,7 +33,6 @@ bool transferMemory(void** dest, void* src, size_t size)
 void startKernel(void *forest, int numTrees, Sample<FeatureType> &sample, FeatureType *features, uint32_t featuresSize, int16_t height, int16_t width, FeatureType *features_integral, uint32_t featuresIntegralSize, int16_t height_integral, int16_t width_integral, size_t numLabels, int lPXOff, int lPYOff, unsigned int *out_result)
 {
 	void** treeHist = new void*[numTrees * 2];
-	void** treeHistGPU = new void*[numTrees * 2];
 
 	// Memory transfer for features
 	FeatureType *featuresGPU = NULL;
@@ -53,10 +52,6 @@ void startKernel(void *forest, int numTrees, Sample<FeatureType> &sample, Featur
 	}
 
 	// Memory transfer for out_result
-	/*for (unsigned int i = 0; i < resultSize; i++)
-	{
-		result[i] = 0;
-	}*/
 	unsigned int *out_resultGPU = NULL;
 	cudaError_t cudaStatus;
 	cudaStatus  = cudaMalloc((void**)&out_resultGPU, numLabels*width*height*sizeof(unsigned int));
@@ -124,6 +119,7 @@ void startKernel(void *forest, int numTrees, Sample<FeatureType> &sample, Featur
 			if (treeHist[t] != NULL)
 				cudaFree(treeHist[t]);
 		}
+		delete[] treeHist;
 
 		cudaFree(featuresGPU);
 		cudaFree(features_integralGPU);
@@ -141,6 +137,7 @@ void startKernel(void *forest, int numTrees, Sample<FeatureType> &sample, Featur
 			if (treeHist[t] != NULL)
 				cudaFree(treeHist[t]);
 		}
+		delete[] treeHist;
 
 		cudaFree(featuresGPU);
 		cudaFree(features_integralGPU);
@@ -154,73 +151,12 @@ void startKernel(void *forest, int numTrees, Sample<FeatureType> &sample, Featur
 		if (treeHist[t] != NULL)
 			cudaFree(treeHist[t]);
 	}
+	delete[] treeHist;
 
 	cudaFree(featuresGPU);
 	cudaFree(features_integralGPU);
 	cudaFree((void*)out_resultGPU);
 }
-/*
-void startKernel(Sample<FeatureType> &sample, NodeGPU *tree, uint32_t treeSize, uint32_t *histograms, uint32_t histSize, FeatureType *featuresGPU, uint32_t featuresSize, int16_t height, int16_t width, FeatureType *features_integralGPU, uint32_t featuresIntegralSize, int16_t height_integral, int16_t width_integral, size_t numLabels, int lPXOff, int lPYOff, unsigned int *out_result)
-{
-	// Memory transfer for tree
-	NodeGPU *treeGPU = NULL;
-	hostGetDevicePointer((void**)&treeGPU, (void*)tree);
-
-	// Memory transfer for histograms
-	uint32_t *histogramsGPU = NULL;
-	hostGetDevicePointer((void**)&histogramsGPU, (void*)histograms);
-
-	// Memory transfer for out_result
-	unsigned int *out_resultGPU = NULL;
-	cudaError_t cudaStatus;
-	/*cudaStatus  = cudaMalloc((void**)&out_resultGPU, numLabels*width*height*sizeof(unsigned int));
-	if (cudaStatus != cudaSuccess)
-	{
-		cudaDisplayError("cudaMalloc", cudaStatus);
-		return;
-	}
-	const int SIZE_BLOCK = 32;
-	dim3 dimBlock(SIZE_BLOCK, SIZE_BLOCK);
-	dim3 dimGrid((int)ceil(width * 1.0f / SIZE_BLOCK), (int)ceil(height * 1.0f / SIZE_BLOCK));
-	initKernel << <dimBlock, dimGrid >> > (height, width, numLabels, out_resultGPU);
-	cudaDeviceSynchronize();*/
-/*
-	bool success = transferMemory((void**)&out_resultGPU, (void*)out_result, width*height*numLabels*sizeof(unsigned int));
-	if (!success)
-	{
-		return;
-	}
-
-	// Kernel launch
-	const int SIZE_BLOCK = 32;
-	dim3 dimBlock(SIZE_BLOCK, SIZE_BLOCK);
-	dim3 dimGrid((int)ceil(width * 1.0f / SIZE_BLOCK), (int)ceil(height * 1.0f / SIZE_BLOCK));
-	kernel <<<dimBlock, dimGrid >>> (sample, treeGPU, histogramsGPU, featuresGPU, features_integralGPU, height, width, height_integral, width_integral, numLabels, lPXOff, lPYOff, out_resultGPU);
-	cudaDeviceSynchronize();
-
-	// Kernel end
-	cudaStatus = cudaGetLastError();
-
-	if (cudaStatus != cudaSuccess)
-	{
-		cudaDisplayError("cudaGetLastError", cudaStatus);
-		cudaFree((void*)out_resultGPU);
-		return;
-	}
-	
-	// Memory transfer
-	cudaStatus = cudaMemcpy(out_result, out_resultGPU, width*height*numLabels*sizeof(unsigned int), cudaMemcpyDeviceToHost);
-	if (cudaStatus != cudaSuccess)
-	{
-		cudaDisplayError("cudaMemcpy", cudaStatus);
-		cudaFree((void*)out_resultGPU);
-		return;
-	}
-
-	cudaFree((void*)out_resultGPU);
-	return;
-}
-*/
 
 __global__ void initKernel(int16_t height, int16_t width, size_t numLabels, unsigned int *out_result)
 {
