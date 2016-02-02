@@ -214,7 +214,7 @@ int main(int argc, char* argv[])
     int optNumTrees=-1;
     char *optTreeFnamePrefix=NULL;
 	char buffer[2048];
-    int optNoImages=1;
+    int optNoImages=12;
 
     srand((unsigned int)time(0));
     setlocale(LC_NUMERIC, "C");

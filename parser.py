@@ -3,15 +3,14 @@ import csv
 items = [[], [], [], [], []]
 
 with open("output.txt", "rb") as infile, open("output.csv", "wb") as outfile:
-	i = 0
-	j = 0
+	i = -1
 	for line in infile:
-		if j == 3 :
+		if line.find('Prediction for image') != -1 :
 			number = line.split(' : ')
 			items[i].append(float(number[1]))
-			i = (i + 1) % 5
 		
-		j = (j + 1) % 6
+		if line.find('------') != -1 :
+			i = (i + 1) % 5
 	
 	newline = 'Original version,'
 	for number in items[0]:

@@ -227,6 +227,7 @@ int main(int argc, char* argv[])
     int optNumTrees=-1;
     char *optTreeFnamePrefix=NULL;
 	char buffer[2048];
+	int optNoImages = 12;
 
     srand((unsigned int)time(0));
     setlocale(LC_NUMERIC, "C");
@@ -270,8 +271,10 @@ int main(int argc, char* argv[])
     else {
         
         // CW Create a dummy training set selection with a single image number
-        pTrainingSet = new TrainingSetSelection<float>(9, idata);
-        ((TrainingSetSelection<float> *)pTrainingSet)->vectSelectedImagesIndices.push_back(0);
+		pTrainingSet = new TrainingSetSelection<float>(9, idata);
+
+		for (int i = 0; i<optNoImages; ++i)
+			((TrainingSetSelection<float> *)pTrainingSet)->vectSelectedImagesIndices.push_back(i);
     }
 
 #ifndef SHUT_UP
